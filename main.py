@@ -6,6 +6,10 @@ import pyaudio
 import wave
 import speech_recognition as sr
 import pickle
+import time
+import simpleaudio as sa
+import io
+
 
 
 openai.api_key = ""  # Replace with your OpenAI API key
@@ -39,7 +43,7 @@ def save_note_bank(note_bank, filename="note_bank.pkl"):
 note_bank = load_note_bank()
 
 
-print(note_bank[0].main_idea)
+# print(note_bank[0].main_idea)
 
 def create_new_note(main_idea):
     note = ProjectNote(main_idea)
@@ -143,6 +147,43 @@ def record_audio(output_filename, record_seconds=7, chunk=1024, format=pyaudio.p
 
 # Example usage
 
+
+
+from pydub import AudioSegment
+import simpleaudio as sa
+
+def text_to_speech_and_play(text):
+    API_URL = "https://api-inference.huggingface.co/models/facebook/fastspeech2-en-ljspeech"
+    headers = {"Authorization": "Bearer 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"}
+
+    for attempt in range(5):
+        response = requests.post(API_URL, headers=headers, json={"inputs": text})
+        if response.status_code == 200 and response.headers.get('Content-Type') == 'audio/flac':
+            audio_data = response.content
+            break
+        else:
+            print(f"Attempt {attempt + 1} failed, error: {response.text}")
+            time.sleep(5)
+    else:
+        print("Failed to convert text to speech after several attempts.")
+        return
+
+    # Convert FLAC to WAV
+    try:
+        audio_flac = AudioSegment.from_file(io.BytesIO(audio_data), format="flac")
+        audio_wav = io.BytesIO()
+        audio_flac.export(audio_wav, format="wav")
+        audio_wav.seek(0)
+
+        # Play the WAV audio
+        wave_obj = sa.WaveObject.from_wave_file(audio_wav)
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+    except Exception as e:
+        print(f"Error processing or playing audio: {e}")
+
+# Example usage
+# text_to_speech_and_play("The answer to the universe is 42", "YOUR_API_KEY")
 
 
 def transcribe_audio(file_path='output.wav', model="whisper-1", response_format="text"):
@@ -264,6 +305,7 @@ def gpt_chat_and_execute(question, context=None, functions=None, model="gpt-3.5-
                 raise ValueError(f"Function {function_name} not defined.")
         else:
             print(assistant_message['content'])
+            return assistant_message['content']
     except Exception as e:
         print(f"Error executing function: {e}")
         return None
@@ -321,8 +363,8 @@ functions = [
 # record_audio("output.wav")
 # # transcribed=transcribe_audio()
 
-# # print('out')
+# print('out')
 record_until_silence()
-gpt_chat_and_execute(question=transcribe_audio(), functions=functions, function_call='auto')
+text_to_speech_and_play(gpt_chat_and_execute(question=transcribe_audio(), functions=functions, function_call='auto'))
 
 save_note_bank(note_bank)
