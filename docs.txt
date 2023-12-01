@@ -1,0 +1,143 @@
+Class Documentation
+ProjectNote
+Purpose: Represents a project note with a main idea and a list of steps.
+Methods:
+__init__(self, main_idea, steps=None): Constructor to initialize a new project note with a main idea and optional steps.
+add_step(self, step_description): Adds a new step to the note with the given description.
+mark_step_done(self, step_index): Marks a step at a specified index as done. Returns a confirmation message or an error if the index is invalid.
+__str__(self): Returns a string representation of the note, including the main idea and all steps.
+Step
+Purpose: Represents a single step in a project note.
+Methods:
+__init__(self, description, is_done=False): Constructor to initialize a step with a description and an optional completion status.
+mark_done(self): Marks the step as completed.
+__str__(self): Returns a string representation of the step, including its description and completion status.
+Function Documentation
+load_note_bank(filename="note_bank.pkl")
+Purpose: Loads a collection of project notes from a file.
+Parameters:
+filename: The name of the file from which to load the notes.
+Returns: A list of ProjectNote objects.
+save_note_bank(note_bank, filename="note_bank.pkl")
+Purpose: Saves a collection of project notes to a file.
+Parameters:
+note_bank: The list of project notes to save.
+filename: The name of the file to save the notes to.
+get_last_note()
+Purpose: Retrieves the last note from the note bank.
+Returns: The last ProjectNote object or None if the bank is empty.
+get_last_note_main_idea()
+Purpose: Gets the main idea of the last note.
+Returns: The main idea of the last note or None if there is no last note.
+get_last_note_steps()
+Purpose: Retrieves the steps of the last note.
+Returns: A list of steps from the last note or None if there is no last note.
+create_new_note(main_idea)
+Purpose: Creates a new project note with the given main idea.
+Parameters:
+main_idea: The main idea for the new note.
+Returns: A confirmation message.
+add_step_to_last_note(step_description)
+Purpose: Adds a step to the last note in the note bank.
+Parameters:
+step_description: The description of the step to be added.
+Returns: A confirmation message or an error if there is no last note.
+search_note_by_main_idea(idea)
+Purpose: Searches for notes by main idea.
+Parameters:
+idea: The main idea to search for.
+Returns: A list of notes whose main ideas contain the search term.
+search_note_by_step_description(description)
+Purpose: Searches for notes by step description.
+Parameters:
+description: The step description to search for.
+Returns: A list of notes containing steps with the search term in their description.
+edit_main_idea(note, new_idea)
+Purpose: Edits the main idea of a given note.
+Parameters:
+note: The note to edit.
+new_idea: The new main idea.
+Returns: A confirmation message or an error if the note is not in the note bank.
+delete_note(note)
+Purpose: Deletes a given note from the note bank.
+Parameters:
+note: The note to delete.
+Returns: A confirmation message or an error if the note is not in the note bank.
+visualize_progress(note)
+Purpose: Visualizes the progress of a given note.
+Parameters:
+note: The note for which to visualize progress.
+Returns: A string showing the completion status of the note's steps.
+generate_summary_report()
+Purpose: Generates a summary report of all notes in the note bank.
+Returns: A string containing the summary report of all notes.
+count_completed_steps(note)
+Purpose: Counts the number of completed steps in a given note.
+Parameters:
+note: The note for which to count the completed steps.
+Returns: The count of completed steps or an error if the note is not in the note bank.
+mark_step_done_in_last_note(step_index)
+Purpose: Marks a step as done in the last note of the note bank.
+Parameters:
+step_index: The index of the step to mark as done.
+Returns: A confirmation message or an error if there is no last note.
+get_all_notes()
+Purpose: Retrieves all notes from the note bank.
+Returns: A string representation of all notes in the note bank.
+
+
+
+
+
+
+
+def create_function_json(function_name, description, parameters_info):
+    function = {
+        "name": function_name,
+        "description": description,
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+
+    for param in parameters_info:
+        param_name = param['name']
+        param_type = param['type']
+        param_desc = param['description']
+        is_required = param['required']
+
+        function['parameters']['properties'][param_name] = {
+            "type": param_type,
+            "description": param_desc
+        }
+
+        if is_required:
+            function['parameters']['required'].append(param_name)
+
+    # Printing the function JSON
+    print("\nGenerated Function JSON:")
+    print(json.dumps(function, indent=4))
+
+def process_function_string(function_str):
+    # Define the context and questions for GPT
+    context = [f"Analyze the following function: {function_str}"]
+
+    # Questions for GPT to answer
+    name_question = "What is the name of the function?"
+    description_question = "What is the purpose or description of this function?"
+    params_question = "List all parameters of the function with their types and descriptions."
+
+    # Get responses from GPT
+    function_name = gpt_chat_and_execute(question=name_question, context=context)
+    function_description = gpt_chat_and_execute(question=description_question, context=context)
+    function_parameters = gpt_chat_and_execute(question=params_question, context=context)
+
+    # Assuming GPT responses are structured correctly,
+    # these variables now contain the function's name, description, and parameter details.
+
+    # Parse and structure the function_parameters if necessary.
+
+    # Call create_function_json with the GPT-generated inputs
+    create_function_json(function_name, function_description, function_parameters)

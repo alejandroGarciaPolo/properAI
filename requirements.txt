@@ -1,0 +1,13 @@
+ json
+ requests
+ openai
+ tenacity  
+ pyaudio
+ wave
+ speech_recognition
+ pickle
+ time
+ simpleaudio 
+ io
+ pydub  
+ simpleaudio 
