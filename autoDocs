@@ -1,0 +1,116 @@
+import ast
+import json
+import os
+import tiktoken
+
+def count_tokens(selected_data):
+    """ Count tokens in the content of all functions for selected files. """
+    tokenizer = tiktoken.encoding_for_model("gpt-4")
+    total_tokens = 0
+
+    for file_data in selected_data:
+        for function in file_data['functions']:
+            content = function['content']
+            total_tokens += len(tokenizer.encode(content))
+
+    return total_tokens
+
+def parse_function(node, source):
+    """ Extract function details from the AST node. """
+    function_name = node.name
+    parameters = [arg.arg for arg in node.args.args]
+    body = '\n'.join(['    ' + line for line in ast.get_source_segment(source, node).splitlines()[1:]])
+    return {'function_name': function_name, 'parameters': parameters, 'content': body}
+
+def parse_python_code(source):
+    """ Parse Python source code and extract functions. """
+    tree = ast.parse(source)
+    functions = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            functions.append(parse_function(node, source))
+    return functions
+
+def parse_imports(tree):
+    """ Parse AST tree for import statements and return a list of imported modules. """
+    imports = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module if node.module else ''
+            for alias in node.names:
+                imports.add(f"{module}.{alias.name}" if module else alias.name)
+    return list(imports)
+
+def process_directory(directory):
+    """ Process each .py file in the given directory and its subdirectories. """
+    all_files_data = []
+    all_imports = set()
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    source_code = f.read()
+                tree = ast.parse(source_code)
+                functions_list = parse_python_code(source_code)
+                imports_list = parse_imports(tree)
+                all_imports.update(imports_list)
+                file_data = {
+                    'name_of_file': file,
+                    'functions': functions_list,
+                    'imports': imports_list
+                }
+                all_files_data.append(file_data)
+    return all_files_data, all_imports
+
+def main():
+    """ Main function to run the script. """
+    directory = input("Enter the directory path: ")
+    data, imports = process_directory(directory)
+
+    # Filter out files with no functions
+    data_with_functions = [file_data for file_data in data if file_data['functions']]
+
+    # Ask for token counting
+    if input("Do you want to count tokens in the files? (y/n) ").lower() == 'y':
+        selected_data_for_tokens = []
+        for file_data in data_with_functions:
+            response = input(f"Do you want to tokenize '{file_data['name_of_file']}'? (y/n/w, w to finish) ").lower()
+            if response == 'y':
+                selected_data_for_tokens.append(file_data)
+            elif response == 'w':
+                break
+
+        # Count tokens in selected files
+        total_tokens = count_tokens(selected_data_for_tokens)
+        print(f"Total number of tokens in selected function contents: {total_tokens}")
+
+    # Ask for documentation
+    if input("Do you want to document the functions? (y/n) ").lower() == 'y':
+        selected_data_for_docs = []
+        for file_data in data_with_functions:
+            response = input(f"Do you want to document functions in '{file_data['name_of_file']}'? (y/n/w, w to finish) ").lower()
+            if response == 'y':
+                selected_data_for_docs.append(file_data)
+            elif response == 'w':
+                break
+
+        for file_data in selected_data_for_docs:
+            for function in file_data['functions']:
+                print(f"Function: {function['function_name']} Parameters: {function['parameters']}")
+                doc = input("Enter a brief explanation of the function (hit enter to skip): ")
+                if doc.strip():
+                    function['documentation'] = doc
+
+    # Add imports to the final data
+    data_with_functions.append({'all_imports': list(imports)})
+
+    # Save the data
+    with open('docsJson.json', 'w', encoding='utf-8') as json_file:
+        json.dump(data_with_functions, json_file, indent=4)
+
+if __name__ == "__main__":
+    main()
