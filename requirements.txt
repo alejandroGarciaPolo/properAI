@@ -1,13 +1,19 @@
- json
- requests
- openai
- tenacity  
- pyaudio
- wave
- speech_recognition
- pickle
- time
- simpleaudio 
- io
- pydub  
- simpleaudio 
+requests
+openai
+tenacity  
+pyaudio
+wave
+simpleaudio 
+pydub  
+simpleaudio 
+openai
+pandas
+numpy
+tenacity
+requests
+pyaudio
+SpeechRecognition
+pywinauto
+pyautogui
+selenium
+tiktoken

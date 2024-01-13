@@ -9,11 +9,32 @@ import pickle
 import time
 import simpleaudio as sa
 import io
+from pydub import AudioSegment
+import simpleaudio as sa
+# def record_until_silence(timeout=None, phrase_time_limit=None):
+#     """
+#     Records audio from the microphone until silence is detected.
+    
+#     :param timeout: Maximum time to wait for speech. If None, wait indefinitely.
+#     :param phrase_time_limit: Maximum time for a single phrase. Set to 5 seconds for your use case.
+#     """
+#     r = sr.Recognizer()
+
+#     with sr.Microphone() as source:
+#         print("Please start speaking. Recording will stop after a 5-second pause.")
+#         r.adjust_for_ambient_noise(source)
+#         # Listen for the first phrase and extract audio
+#         audio = r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+
+#     # Save the audio to a WAV file
+#     with open("output.wav", "wb") as f:
+#         f.write(audio.get_wav_data())
+
+#     print("Recording stopped and saved to 'output.wav'")
 
 
-
-openai.api_key = ""  # Replace with your OpenAI API key
-client = openai.OpenAI(api_key="")
+openai.api_key = "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"  # Replace with your OpenAI API key
+client = openai.OpenAI(api_key="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")
 
 
 class ProjectNote:
@@ -21,11 +42,33 @@ class ProjectNote:
         self.main_idea = main_idea
         self.steps = steps if steps is not None else []
 
-    def add_step(self, step):
+    def add_step(self, step_description):
+        step = Step(step_description)
         self.steps.append(step)
 
+    def mark_step_done(self, step_index):
+        if 0 <= step_index < len(self.steps):
+            self.steps[step_index].mark_done()
+            return "Step marked as done."
+        else:
+            return "Invalid step index."
+
     def __str__(self):
-        return f"Idea: {self.main_idea}\nSteps: {'; '.join(self.steps)}"
+        steps_str = "\n".join(str(step) for step in self.steps)
+        return f"Idea: {self.main_idea}\nSteps:\n{steps_str}"
+
+
+class Step:
+    def __init__(self, description, is_done=False):
+        self.description = description
+        self.is_done = is_done
+
+    def mark_done(self):
+        self.is_done = True
+
+    def __str__(self):
+        status = "Done" if self.is_done else "Not Done"
+        return f"{self.description} [{status}]"
 
 def load_note_bank(filename="note_bank.pkl"):
     try:
@@ -39,26 +82,101 @@ def save_note_bank(note_bank, filename="note_bank.pkl"):
         pickle.dump(note_bank, file)
 
 
+def get_last_note():
+    if note_bank:
+        return note_bank[-1]
+    else:
+        return None
 
-note_bank = load_note_bank()
+def get_last_note_main_idea():
+    last_note = get_last_note()
+    if last_note:
+        return last_note.main_idea
+    else:
+        return None
 
-
-# print(note_bank[0].main_idea)
+def get_last_note_steps():
+    last_note = get_last_note()
+    if last_note:
+        return last_note.steps
+    else:
+        return None
 
 def create_new_note(main_idea):
     note = ProjectNote(main_idea)
     note_bank.append(note)
     return "Note created."
 
-def add_step_to_last_note(step):
+def add_step_to_last_note(step_description):
     if note_bank:
-        note_bank[-1].add_step(step)
+        note_bank[-1].add_step(step_description)
         return "Step added."
     else:
         return "No note to add step to."
 
+def search_note_by_main_idea(idea):
+    return [note for note in note_bank if idea.lower() in note.main_idea.lower()]
+
+def search_note_by_step_description(description):
+    matching_notes = []
+    for note in note_bank:
+        if any(description.lower() in step.description.lower() for step in note.steps):
+            matching_notes.append(note)
+    return matching_notes
+
+def edit_main_idea(note, new_idea):
+    if note in note_bank:
+        note.main_idea = new_idea
+        return "Main idea updated."
+    else:
+        return "Note not found in the note bank."
+
+def delete_note(note):
+    if note in note_bank:
+        note_bank.remove(note)
+        return "Note deleted."
+    else:
+        return "Note not found in the note bank."
+
+def visualize_progress(note):
+    if note in note_bank:
+        completed_steps = sum(step.is_done for step in note.steps)
+        total_steps = len(note.steps)
+        progress_percentage = (completed_steps / total_steps * 100) if total_steps > 0 else 0
+        return f"Progress of '{note.main_idea}': [{completed_steps}/{total_steps}] ({progress_percentage:.2f}%)"
+    else:
+        return "Note not found in the note bank."
+
+def generate_summary_report():
+    report = []
+    for note in note_bank:
+        completed_steps = sum(step.is_done for step in note.steps)
+        total_steps = len(note.steps)
+        report.append(f"{note.main_idea}: {completed_steps}/{total_steps} steps completed")
+    return "\n".join(report)
+
+def count_completed_steps(note):
+    if note in note_bank:
+        return sum(step.is_done for step in note.steps)
+    else:
+        return "Note not found in the note bank."
+
+def mark_step_done_in_last_note(step_index):
+    if note_bank:
+        return note_bank[-1].mark_step_done(step_index)
+    else:
+        return "No note to mark step in."
+
+
 def get_all_notes():
     return "\n\n".join(str(note) for note in note_bank)
+
+
+note_bank = load_note_bank()
+
+
+# print(note_bank[0].main_idea)
+
 
 
 def test_function(is_testing):
@@ -84,26 +202,7 @@ def record_until_silence(pause_threshold=3.0):
         f.write(audio.get_wav_data())
 
     print("Recording stopped and saved to 'output.wav'")
-# def record_until_silence(timeout=None, phrase_time_limit=None):
-#     """
-#     Records audio from the microphone until silence is detected.
-    
-#     :param timeout: Maximum time to wait for speech. If None, wait indefinitely.
-#     :param phrase_time_limit: Maximum time for a single phrase. Set to 5 seconds for your use case.
-#     """
-#     r = sr.Recognizer()
 
-#     with sr.Microphone() as source:
-#         print("Please start speaking. Recording will stop after a 5-second pause.")
-#         r.adjust_for_ambient_noise(source)
-#         # Listen for the first phrase and extract audio
-#         audio = r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
-
-#     # Save the audio to a WAV file
-#     with open("output.wav", "wb") as f:
-#         f.write(audio.get_wav_data())
-
-#     print("Recording stopped and saved to 'output.wav'")
 
 def record_audio(output_filename, record_seconds=7, chunk=1024, format=pyaudio.paInt16, channels=1, rate=44100):
     """
@@ -149,8 +248,6 @@ def record_audio(output_filename, record_seconds=7, chunk=1024, format=pyaudio.p
 
 
 
-from pydub import AudioSegment
-import simpleaudio as sa
 
 def text_to_speech_and_play(text):
     API_URL = "https://api-inference.huggingface.co/models/facebook/fastspeech2-en-ljspeech"
@@ -255,6 +352,12 @@ available_functions = {
     "test_function": test_function,
     "create_function_json": create_function_json,
     'create_new_note': create_new_note,
+    'get_last_note': get_last_note,
+    'get_last_note_main_idea':get_last_note_main_idea,
+    'get_last_note_steps':get_last_note_steps,
+    'add_step_to_last_note':add_step_to_last_note,
+    'search_note_by_main_idea':search_note_by_main_idea,
+    'edit_main_idea':edit_main_idea,
 
 
 }
@@ -310,8 +413,6 @@ def gpt_chat_and_execute(question, context=None, functions=None, model="gpt-3.5-
         print(f"Error executing function: {e}")
         return None
 
-# Example usage
-question = "Hey please add this two numbers, 5 and 7"
 
 functions = [
 {
@@ -355,6 +456,67 @@ functions = [
         ]
     }
 },
+{
+    "name": "get_last_note",
+    "description": "returns the last project note from the note bank",
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+},
+{
+    "name": "get_last_note_main_idea",
+    "description": "Returns the latest note's main idea",
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+},
+{
+    "name": "get_last_note_steps",
+    "description": "Get the list of steps from the last note on the note bank",
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+},
+{
+    "name": "add_step_to_last_note",
+    "description": "Adds a step to the last note",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "step_description": {
+                "type": "string",
+                "description": "The step, a text that describes the step"
+            }
+        },
+        "required": [
+            "step_description"
+        ]
+    }
+},
+{
+    "name": "search_note_by_main_idea",
+    "description": "Returns a note from the note bank based on a Project notes main idea",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "idea": {
+                "type": "string",
+                "description": "the main idea to query for"
+            }
+        },
+        "required": [
+            "idea"
+        ]
+    }
+},
+
+
 
 ]
 
@@ -364,7 +526,79 @@ functions = [
 # # transcribed=transcribe_audio()
 
 # print('out')
-record_until_silence()
-text_to_speech_and_play(gpt_chat_and_execute(question=transcribe_audio(), functions=functions, function_call='auto'))
+
+import json
+import openai  # Make sure to import the OpenAI library
+
+def run_conversation():
+    client = openai.ChatCompletion.create()  # Initialize the OpenAI client
+
+    # Define your available functions here
+    available_functions = {
+        "test_function": test_function,
+        "create_function_json": create_function_json,
+        'create_new_note': create_new_note,
+        'get_last_note': get_last_note,
+        'get_last_note_main_idea':get_last_note_main_idea,
+        'get_last_note_steps':get_last_note_steps,
+        'add_step_to_last_note':add_step_to_last_note,
+        'search_note_by_main_idea':search_note_by_main_idea,
+        'edit_main_idea':edit_main_idea,
+
+
+    }
+
+    # Define your tools (functions that GPT-3 can call)
+    tools = functions
+
+    messages = []  # Initialize conversation history
+
+    while True:  # Start the loop
+        user_query = input("You: ")  # Get input from the user
+        if user_query.lower() == 'exit':  # Provide a way to exit the loop
+            break
+
+        # Append the user query to the conversation history
+        messages.append({"role": "user", "content": user_query})
+
+        # Step 1: Send the conversation and available functions to the model
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+        )
+        response_message = response.choices[0].message
+        tool_calls = response_message.tool_calls
+
+        # Step 2 and 3: Check if the model wanted to call a function and call it
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            function_to_call = available_functions.get(function_name)
+            if function_to_call:
+                function_args = json.loads(tool_call.function.arguments)
+                function_response = function_to_call(**function_args)
+
+                # Append function response to the conversation history
+                messages.append(
+                    {
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": function_name,
+                        "content": function_response,
+                    }
+                )
+
+        # Print the assistant's response
+        print("Assistant:", response_message.content)
+
+    print("Conversation ended.")
+
+# Call the function to start the conversation
+run_conversation()
+
+
+# record_until_silence()
+# text_to_speech_and_play(gpt_chat_and_execute(question=transcribe_audio(), functions=functions, function_call='auto'))
 
 save_note_bank(note_bank)
